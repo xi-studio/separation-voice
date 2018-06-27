@@ -107,3 +107,6 @@ venv.bak/
 data/
 checkpoints
 
+src/saved_models
+src/images
+src/__pycache__
