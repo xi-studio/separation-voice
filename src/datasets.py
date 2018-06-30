@@ -31,7 +31,6 @@ class Radars(data.Dataset):
 
     def __len__(self):
 
-        #return len(self.image_list)
-        return 100000
+        return len(self.image_list)
 
 

@@ -1,11 +1,12 @@
 import numpy as np
 import h5py
 import glob
+import librosa
 
 from scipy.io import wavfile
 
-
-scale = np.power(2,12)
+fs = 22050
+scale = np.power(2,16)
 
 def pic(x,x1):
     k = x.shape(0) // scale
@@ -27,7 +28,6 @@ def tobit(a):
         base[x+1] = s % 2
         s = s // 2
      
-    #print(np.sum(base))
     return base
 
     
@@ -37,19 +37,18 @@ def main():
     num = 0
     for f in res:
         print(f)
-        f1 = f.replace('Mixtures','Sources').replace('mixture','vocals') 
-        fs,x = wavfile.read(f)
-        fs1,x1 = wavfile.read(f1)
-        k = x.shape[0] // scale
-        a = x[:k*scale]
-        b = x1[:k*scale]
-        a = a.reshape((k,scale,2))
-        b = b.reshape((k,scale,2))
+        f1   = f.replace('Mixtures','Sources').replace('mixture','vocals') 
+        x,_  = librosa.load(f, sr=fs, mono=False)
+        x1,_ = librosa.load(f1, sr=fs, mono=False)
+        k = x.shape[1] // scale
+
+        a = x[:,:k*scale]
+        b = x1[:,:k*scale]
+        a = a.reshape((2,k,scale))
+        b = b.reshape((2,k,scale))
         for i in range(k):
-            if np.sum(a[i]) !=0:
-                savefile(tobit(a[i,:,0]),tobit(b[i,:,0]),num)
-                num += 1
-                savefile(tobit(a[i,:,1]),tobit(b[i,:,1]),num)
+            if np.sum(a[:,i]) !=0:
+                savefile(a[:,i],b[:,i],num)
                 num += 1
 
 

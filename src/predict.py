@@ -19,6 +19,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
+from scipy import misc
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='epoch to start training from')
 parser.add_argument('--n_epochs', type=int, default=200, help='number of epochs of training')
@@ -51,11 +53,9 @@ criterion_pixelwise = torch.nn.MSELoss()
 # Loss weight of L1 pixel-wise loss between translated image and real image
 lambda_pixel = 100
 
-# Calculate output of image discriminator (PatchGAN)
-patch = (1, opt.img_height//2**4, opt.img_width//2**4)
 
 # Initialize generator and discriminator
-generator = GeneratorUNet(in_channels=2, out_channels=2).to(device)
+generator = GeneratorUNet(in_channels=17, out_channels=17).to(device)
 #discriminator = Discriminator().to(device)
 
 
@@ -63,18 +63,9 @@ if cuda:
     criterion_GAN.cuda()
     criterion_pixelwise.cuda()
 
-if opt.epoch != 0:
-    # Load pretrained models
-    generator.load_state_dict(torch.load('saved_models/%s/generator_%d.pth' % (opt.dataset_name, opt.epoch)))
-    #discriminator.load_state_dict(torch.load('saved_models/%s/discriminator_%d.pth' % (opt.dataset_name, opt.epoch)))
-else:
-    # Initialize weights
-    generator.apply(weights_init_normal)
-    #discriminator.apply(weights_init_normal)
-
-# Optimizers
-optimizer_G = torch.optim.Adam(generator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2))
-#optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2))
+# Load pretrained models
+generator.load_state_dict(torch.load('saved_models/generator_199.pth'))
+#discriminator.load_state_dict(torch.load('saved_models/%s/discriminator_%d.pth' % (opt.dataset_name, opt.epoch)))
 
 # Configure dataloaders
 dataloader = DataLoader(Radars(),batch_size=opt.batch_size, shuffle=True, num_workers=1)
@@ -85,6 +76,8 @@ dataloader = DataLoader(Radars(),batch_size=opt.batch_size, shuffle=True, num_wo
 
 prev_time = time.time()
 
+
+num = 0
 for epoch in range(opt.epoch, opt.n_epochs):
     for i, batch in enumerate(dataloader):
         A, B = batch
@@ -97,16 +90,19 @@ for epoch in range(opt.epoch, opt.n_epochs):
         #  Train Generators
         # ------------------
 
-        optimizer_G.zero_grad()
-
         # GAN loss
         fake_B = generator(A)
+        m = fake_B.to(torch.device('cpu')).detach().numpy()
+        n = A.to(torch.device('cpu')).detach().numpy()
+        l = B.to(torch.device('cpu')).detach().numpy()
+        misc.imsave('images/music/%d_%d.png' % (epoch,i),np.concatenate((m[0],l[0],n[0])))
         loss_pixel = criterion_pixelwise(fake_B, B)
+        print(loss_pixel)
+        num += 1
+        if num >100:
+            break
 
 
-        loss_pixel.backward()
-
-        optimizer_G.step()
 
         # --------------
         #  Log Progress
@@ -125,13 +121,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
                                                         loss_pixel.item(), 
                                                         time_left))
 
-#        # If at sample interval save image
 #        if batches_done % opt.sample_interval == 0:
 #            sample_images(batches_done)
-#
-#
-    if opt.checkpoint_interval != -1 and epoch % opt.checkpoint_interval == 0:
-        # Save model checkpoints
-        torch.save(generator.state_dict(), 'saved_models/%s/generator_%d.pth' % (opt.dataset_name, epoch))
-#        torch.save(discriminator.state_dict(), 'saved_models/%s/discriminator_%d.pth' % (opt.dataset_name, epoch))
-torch.save(generator.state_dict(), 'saved_models/%s/generator_end.pth' % (opt.dataset_name))
+
+
