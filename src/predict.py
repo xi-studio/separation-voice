@@ -55,7 +55,7 @@ lambda_pixel = 100
 
 
 # Initialize generator and discriminator
-generator = GeneratorUNet(in_channels=17, out_channels=17).to(device)
+generator = GeneratorUNet(in_channels=2, out_channels=2).to(device)
 #discriminator = Discriminator().to(device)
 
 
@@ -64,7 +64,7 @@ if cuda:
     criterion_pixelwise.cuda()
 
 # Load pretrained models
-generator.load_state_dict(torch.load('saved_models/generator_199.pth'))
+generator.load_state_dict(torch.load('saved_models/facades/generator_end.pth'))
 #discriminator.load_state_dict(torch.load('saved_models/%s/discriminator_%d.pth' % (opt.dataset_name, opt.epoch)))
 
 # Configure dataloaders
@@ -95,9 +95,11 @@ for epoch in range(opt.epoch, opt.n_epochs):
         m = fake_B.to(torch.device('cpu')).detach().numpy()
         n = A.to(torch.device('cpu')).detach().numpy()
         l = B.to(torch.device('cpu')).detach().numpy()
+        res = np.concatenate((m[0],l[0],n[0]))
+        print(res.shape)
+        print(np.mean(res))
         misc.imsave('images/music/%d_%d.png' % (epoch,i),np.concatenate((m[0],l[0],n[0])))
         loss_pixel = criterion_pixelwise(fake_B, B)
-        print(loss_pixel)
         num += 1
         if num >100:
             break
